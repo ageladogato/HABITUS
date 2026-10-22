@@ -2,7 +2,7 @@
 const OUTFITS = {
   hanfu:{name:"Hanfu", city:"Beijing", price:60, col:"#E8B4B0", sleeves:"wide", lower:"robe", hem:"#B8423A", collar:"cross", sash:"#8E3B46"},
   kimono:{name:"Kimono", city:"Tokyo", price:60, col:"#34476B", sleeves:"wide", lower:"robe", pattern:"floral", collar:"cross", obi:"#D9A441"},
-  trench:{name:"Trench coat", city:"Paris", price:45, col:"#C9A87A", sleeves:"normal", lower:"pants", lowerCol:"#2B2B2B", collar:"trench", shoes:"#3A2A22"},
+  trench:{name:"Trench coat", city:"London", price:105, col:"#C29A62", sleeves:"normal", lower:"pants", lowerCol:"#2B2B2B", collar:"trench", shoes:"#3A2A22"},
   toga:{name:"Toga", city:"Rome", price:45, col:"#F4EEE2", sleeves:"none", lower:"robe", hem:"#7A3A7A", collar:"toga"},
   prom:{name:"Prom dress", city:"New York", price:60, col:"#C2387A", sleeves:"none", lower:"gown", collar:"sweet", sparkle:true},
   tiedye:{name:"Tie-dye", city:"San Francisco", price:35, col:"#F2C14E", sleeves:"short", lower:"pants", lowerCol:"#7E97AE", pattern:"tiedye", collar:"round"},
@@ -19,7 +19,7 @@ const ACCESSORIES = {
   laurel:{name:"Laurel wreath", slot:"head", city:"Rome", price:15}, kanzashi:{name:"Kanzashi hairpin", slot:"head", city:"Tokyo", price:15},
   jadepin:{name:"Jade hairpin", slot:"head", city:"Beijing", price:15}, fez:{name:"Fez with tassel", slot:"head", city:"Athens", price:15},
   tiara:{name:"Tiara", slot:"head", price:25}, tophat:{name:"Top hat", slot:"head", price:25}, boater:{name:"Straw boater", slot:"head", price:15},
-  pearls:{name:"Pearl necklace", slot:"neck", price:20}, goldchain:{name:"Gold chain", slot:"neck", price:15}, silkscarf:{name:"Silk scarf", slot:"neck", city:"Paris", price:15},
+  pearls:{name:"Pearl necklace", slot:"neck", price:20}, goldchain:{name:"Gold chain", slot:"neck", price:15}, silkscarf:{name:"Silk scarf", slot:"neck", city:"Paris", price:15}, checkscarf:{name:"Check scarf", slot:"neck", city:"London", price:45},
   hearts:{name:"Heart sunglasses", slot:"face", price:15}, monocle:{name:"Monocle", slot:"face", price:20},
   corsage:{name:"Wrist corsage", slot:"wrist", city:"New York", price:15}, bangle:{name:"Jade bangle", slot:"wrist", price:15}, watch:{name:"Wristwatch", slot:"wrist", price:15}, bracelets:{name:"Friendship bracelets", slot:"wrist", city:"San Francisco", price:10},
   fan:{name:"Folding fan", slot:"hand", city:"Tokyo", price:15}, baguette:{name:"Baguette", slot:"hand", city:"Paris", price:10}, gelato:{name:"Gelato", slot:"hand", city:"Rome", price:10},
@@ -57,6 +57,7 @@ function accHead(id){
     case "pearls": return `<path d="M24 46 Q32 55 40 46" stroke="none" fill="none"/>${Array.from({length:9},(_,i)=>{ const t = i/8, x = 24+16*t, y = 46+7*Math.sin(Math.PI*t); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.2" fill="#FBF7EE" stroke="#D9CFBC" stroke-width=".3"/>`; }).join("")}`;
     case "goldchain": return `<path d="M25 46 Q32 55 39 46" stroke="#D9A441" stroke-width="1.3" fill="none" stroke-dasharray="1.6 .8"/>`;
     case "silkscarf": return `<path d="M24 45 Q32 51 40 45 L40 48 Q32 54 24 48Z" fill="#7FAED0"/><path d="M30 49 l-4 8 l4 -1 l2 -6Z M34 49 l4 8 l-4 -1 l-2 -6Z" fill="#D88C98"/><circle cx="32" cy="49" r="1.8" fill="#F2C14E"/>`;
+    case "checkscarf": return `${patternIn("check-fine", "M23 44.5 Q32 51 41 44.5 L41.6 48.6 Q32 55 22.4 48.6Z", [21,43,22,13])}${patternIn("check-fine", "M33 49 L36 61 L41 60 L38 48Z", [32,47,10,15])}<path d="M36.2 61 v1.8 M37.6 60.8 v1.8 M39 60.6 v1.8 M40.4 60.3 v1.8" stroke="#C9A87A" stroke-width=".7"/>`;
     case "hearts": return `<path d="M27.5 34.5 l-4.5 -4.5 a2.5 2.5 0 0 1 4.5 -2.4 a2.5 2.5 0 0 1 4.5 2.4Z M36.5 34.5 l-4.5 -4.5 a2.5 2.5 0 0 1 4.5 -2.4 a2.5 2.5 0 0 1 4.5 2.4Z" fill="#E0567A"/><path d="M31.6 30 h.8" stroke="#3B2E22" stroke-width="1"/>`;
     case "monocle": return `<circle cx="36.5" cy="31" r="4.4" fill="#FFFFFF" fill-opacity=".2" stroke="#C9A050" stroke-width="1.2"/><path d="M40.4 33.4 Q42 42 38 48" stroke="#C9A050" stroke-width=".6" fill="none"/>`;
   }
@@ -97,6 +98,8 @@ function patternIn(kind, clipPath, box){
   if (kind.startsWith("breton:")) for (let y=y0+8; y<y0+h; y+=7) s += `<path d="M${x0} ${y} h${w}" stroke="${kind.slice(7)}" stroke-width="2.6"/>`;
   if (kind==="stripes") for (let x=x0; x<x0+w; x+=5) s += `<path d="M${x} ${y0} v${h}" stroke="#7FAED0" stroke-width="1.4"/>`;
   if (kind==="quilt") for (let y=y0+4; y<y0+h; y+=6) s += `<path d="M${x0} ${y} h${w}" stroke="${"#6EA88E"}" stroke-width="1.2"/>`;
+  if (kind.startsWith("check")) { const k = kind==="check-fine" ? 5 : 8; s += `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#D9BE8E"/>`;
+    for (let t=0; t<Math.max(w,h); t+=k) [["#1E1E1E",k*.22,0,.8],["#F7F2E6",k*.07,k*.42,1],["#B8302A",k*.06,k*.7,1]].forEach(([c,sw,o,op]) => { s += `<path d="M${x0+t+o} ${y0} v${h} M${x0} ${y0+t+o} h${w}" stroke="${c}" stroke-width="${sw}" opacity="${op}"/>`; }); }
   if (kind==="tiedye") { const cx = x0+w/2, cy = y0+h/2; ["#E07A5F","#F2C14E","#9BC27A","#7FAED0","#9A86C2","#D88C98"].forEach((c,i) => { s += `<circle cx="${cx}" cy="${cy}" r="${((6-i)*Math.max(w,h)/10).toFixed(1)}" fill="${c}"/>`; }); }
   return s + `</g>`;
 }
@@ -113,7 +116,7 @@ function outfitTorsoFig(O, av){
   if (O.sparkle) s += [[-8,-50],[6,-44],[-2,-38],[10,-56]].map(([x,y])=>`<path class="twinkle" d="M${x} ${y-2} v4 M${x-2} ${y} h4" stroke="#FFF" stroke-width="1"/>`).join("");
   switch(O.collar){
     case "cross": s += `<path d="M-9 -80 L7 -54" stroke="#F4EDE0" stroke-width="4"/><path d="M9 -80 L-7 -54" stroke="${d}" stroke-width="4.4"/>`; break;
-    case "trench": s += `<path d="M-6 -80 L0 -56 L6 -80Z" fill="#F4EDE0"/>${[-72,-66,-60].map(y=>`<path d="M-5 ${y} H5" stroke="#34476B" stroke-width="1.6"/>`).join("")}<path d="M-8 -80 L-1 -56 L-13 -66Z M8 -80 L1 -56 L13 -66Z" fill="${d}"/><rect x="-19" y="-48" width="38" height="4" fill="${d}"/><rect x="-3" y="-49" width="6" height="6" fill="none" stroke="#3A2A22"/>`; break;
+    case "trench": s += `${patternIn("check", "M-6 -80 L0 -56 L6 -80Z", [-7,-81,14,26])}<path d="M-8 -80 L-1 -56 L-13 -66Z M8 -80 L1 -56 L13 -66Z" fill="${d}"/><path d="M-19 -77 L-11 -79 L-11 -76 L-19 -74Z M19 -77 L11 -79 L11 -76 L19 -74Z" fill="${d}"/><path d="M-1 -56 V-36" stroke="${d}" stroke-width=".8"/>${[-62,-54].map(y=>`<circle cx="-6" cy="${y}" r="1.3" fill="#3A2A22"/><circle cx="6" cy="${y}" r="1.3" fill="#3A2A22"/>`).join("")}<rect x="-19" y="-48" width="38" height="4" fill="${d}"/><rect x="-3.4" y="-49.2" width="6.8" height="6.4" rx="1" fill="none" stroke="#2B2B2B" stroke-width="1.2"/><path d="M0 -46 h2.6" stroke="#2B2B2B" stroke-width="1"/><path d="M14 -44 l2 7 l-3 0Z" fill="${d}"/>`; break;
     case "tux": s += `<path d="M-6 -80 L0 -48 L6 -80Z" fill="#FBF7EE"/><path d="M-8 -80 L-1 -50 L-12 -64Z M8 -80 L1 -50 L12 -64Z" fill="#3A3A40"/><path d="M0 -76 L-5 -79 L-5 -73Z M0 -76 L5 -79 L5 -73Z" fill="#111"/><circle cx="0" cy="-62" r=".8" fill="#111"/><circle cx="0" cy="-56" r=".8" fill="#111"/>`; break;
     case "suit": s += `<path d="M-6 -80 L0 -52 L6 -80Z" fill="#FBF7EE"/><path d="M0 -76 L-2 -60 L0 -54 L2 -60Z" fill="#34476B"/><path d="M-8 -80 L-1 -52 L-12 -64Z M8 -80 L1 -52 L12 -64Z" fill="${d}"/>`; break;
     case "vest": s += `<path d="M-19 -76 Q-21 -56 -18 -40 L-8 -40 L-6 -78Z M19 -76 Q21 -56 18 -40 L8 -40 L6 -78Z" fill="#34476B"/>${[-70,-62,-54,-46].map(y=>`<path d="M-15 ${y} q3 -2 6 0 M9 ${y} q3 -2 6 0" stroke="#D9A441" stroke-width="1" fill="none"/>`).join("")}<rect x="-19" y="-40" width="38" height="5" fill="#B8423A"/>`; break;
@@ -156,7 +159,7 @@ function outfitBust(O, av){
   if (O.pattern && O.collar==="straps") s += patternIn(O.pattern, "M14 66 Q16 56 32 56 Q48 56 50 66Z", [12,54,40,12]);
   switch(O.collar){
     case "cross": s += `<path d="M24 46 L37 66" stroke="#F4EDE0" stroke-width="3.6"/><path d="M40 46 L27 66" stroke="${d}" stroke-width="4"/>`; break;
-    case "trench": s += `<path d="M27 46 L32 64 L37 46Z" fill="#F4EDE0"/><path d="M28 52 H36 M29 57 H35" stroke="#34476B" stroke-width="1.6"/><path d="M26 46 L31 64 L22 54Z M38 46 L33 64 L42 54Z" fill="${d}"/>`; break;
+    case "trench": s += `${patternIn("check-fine", "M27 46 L32 64 L37 46Z", [26,45,12,20])}<path d="M26 46 L31 64 L22 54Z M38 46 L33 64 L42 54Z" fill="${d}"/><path d="M10 54 L18 50 L19 53 L11 57Z M54 54 L46 50 L45 53 L53 57Z" fill="${d}"/><circle cx="25" cy="61" r="1.1" fill="#3A2A22"/><circle cx="39" cy="61" r="1.1" fill="#3A2A22"/>`; break;
     case "tux": s += `<path d="M27 46 L32 66 L37 46Z" fill="#FBF7EE"/><path d="M26 46 L31 66 L22 56Z M38 46 L33 66 L42 56Z" fill="#3A3A40"/><path d="M32 49 L28 47 L28 51Z M32 49 L36 47 L36 51Z" fill="#111"/>`; break;
     case "suit": s += `<path d="M27 46 L32 66 L37 46Z" fill="#FBF7EE"/><path d="M32 48 L30 60 L32 64 L34 60Z" fill="#34476B"/><path d="M26 46 L31 66 L22 56Z M38 46 L33 66 L42 56Z" fill="${d}"/>`; break;
     case "vest": s += `<path d="M10 66 Q12 52 22 48 L27 66Z M54 66 Q52 52 42 48 L37 66Z" fill="#34476B"/><path d="M14 58 q3 -2 6 0 M44 58 q3 -2 6 0" stroke="#D9A441" stroke-width="1" fill="none"/>`; break;
