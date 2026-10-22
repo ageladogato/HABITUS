@@ -74,22 +74,68 @@ const guessCat = n => {
   return "study";
 };
 const ITEM_CAT = {book:"read", sneakers:"move", pillow:"sleep", flowers:"mindful", journal:"journal", headphones:"study", phone:"unplug", bottle:"nourish", bread:"nourish", fruit:"nourish", mug:"sleep", plant:"mindful"};
-const SUGGESTIONS = [
-  {name:"Screen time", type:"duration", dir:"max", target:180, cat:"unplug"},
-  {name:"Read 20 pages", type:"check", cat:"read"},
-  {name:"Exercise", type:"duration", dir:"min", target:30, cat:"move"},
-  {name:"Lights out", type:"clock", dir:"max", target:1410, cat:"sleep"},
-  {name:"Wake up", type:"clock", dir:"max", target:450, cat:"sleep"},
-  {name:"Drink 8 glasses of water", type:"check", cat:"nourish"},
-  {name:"Meditate", type:"duration", dir:"min", target:10, cat:"mindful"},
-  {name:"Journal", type:"check", cat:"journal"},
-  {name:"Deep work", type:"duration", dir:"min", target:120, cat:"study"},
-  {name:"Practise a language", type:"duration", dir:"min", target:20, cat:"language"},
-  {name:"Cook at home", type:"check", cat:"nourish"},
-  {name:"Call family", type:"check", cat:"connect"},
-  {name:"No social media before noon", type:"check", cat:"unplug"},
-  {name:"Walk outside", type:"duration", dir:"min", target:30, cat:"move"}
-];
+/* Goal ideas, grouped by area. Setup asks for the area first, then the exact goal. */
+const GOAL_IDEAS = {
+  move: [
+    {name:"Steps", type:"number", dir:"min", target:10000, unit:"steps"},
+    {name:"Exercise", type:"duration", dir:"min", target:30},
+    {name:"Walk outside", type:"duration", dir:"min", target:30},
+    {name:"Run", type:"number", dir:"min", target:5, unit:"km"},
+    {name:"Stretch", type:"duration", dir:"min", target:10},
+    {name:"Go to the gym", type:"check"}
+  ],
+  nourish: [
+    {name:"Water", type:"number", dir:"min", target:8, unit:"glasses"},
+    {name:"Fruit and veg", type:"number", dir:"min", target:5, unit:"portions"},
+    {name:"Cook at home", type:"check"},
+    {name:"Eat breakfast", type:"check"},
+    {name:"Coffee", type:"number", dir:"max", target:2, unit:"cups"},
+    {name:"No sugary snacks", type:"check"},
+    {name:"Alcohol-free day", type:"check"}
+  ],
+  sleep: [
+    {name:"Lights out", type:"clock", dir:"max", target:1410},
+    {name:"Wake up", type:"clock", dir:"max", target:450},
+    {name:"Hours of sleep", type:"duration", dir:"min", target:480}
+  ],
+  read: [
+    {name:"Pages read", type:"number", dir:"min", target:20, unit:"pages"},
+    {name:"Reading time", type:"duration", dir:"min", target:30},
+    {name:"Read before bed", type:"check"}
+  ],
+  unplug: [
+    {name:"Screen time", type:"duration", dir:"max", target:180},
+    {name:"No social media before noon", type:"check"},
+    {name:"Phone pickups", type:"number", dir:"max", target:50, unit:"pickups"},
+    {name:"Phone away", type:"clock", dir:"max", target:1320}
+  ],
+  mindful: [
+    {name:"Meditate", type:"duration", dir:"min", target:10},
+    {name:"Breathing exercise", type:"check"},
+    {name:"Time outdoors", type:"duration", dir:"min", target:20}
+  ],
+  journal: [
+    {name:"Journal", type:"check"},
+    {name:"Gratitudes", type:"number", dir:"min", target:3, unit:"things"},
+    {name:"Words written", type:"number", dir:"min", target:300, unit:"words"}
+  ],
+  study: [
+    {name:"Deep work", type:"duration", dir:"min", target:120},
+    {name:"Study", type:"duration", dir:"min", target:60},
+    {name:"Practise an instrument", type:"duration", dir:"min", target:20}
+  ],
+  language: [
+    {name:"Practise a language", type:"duration", dir:"min", target:20},
+    {name:"New words", type:"number", dir:"min", target:10, unit:"words"},
+    {name:"Language lessons", type:"number", dir:"min", target:1, unit:"lessons"}
+  ],
+  connect: [
+    {name:"Call family", type:"check"},
+    {name:"Message a friend", type:"check"},
+    {name:"Quality time", type:"duration", dir:"min", target:60}
+  ]
+};
+const SUGGESTIONS = Object.entries(GOAL_IDEAS).flatMap(([cat, list]) => list.map(g => ({...g, cat})));
 const QUICK = {
   cheer:{label:"Cheer", text: n => `Proud of you, ${n}. Keep going!`},
   nudge:{label:"Nudge", text: n => `Gentle nudge, ${n}: I haven’t seen your check-in yet today.`},
@@ -104,7 +150,7 @@ const diffDays = (a,b) => Math.round((parse(a)-parse(b))/864e5);
 const today = () => fmt(new Date());
 const shortDate = s => parse(s).toLocaleDateString(undefined,{month:"short", day:"numeric"});
 const prettyDay = s => { const t = today(); if (s===t) return "Today"; if (s===addDays(t,-1)) return "Yesterday"; return parse(s).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}); };
-const fmtNum = v => (Math.round(v*100)/100).toString();
+const fmtNum = v => (Math.round(v*100)/100).toLocaleString();
 const fmtDur = m => { m = Math.round(m); const h = Math.floor(m/60), r = m%60; return h && r ? `${h} h ${r} min` : h ? `${h} h` : `${r} min`; };
 const fmtClock = m => { m = ((Math.round(m)%1440)+1440)%1440; const d = new Date(2000,0,1,Math.floor(m/60),m%60); return d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit",hour12:!pref("clock24")}); };
 const clockStr = m => m==null||m==="" ? "" : `${pad(Math.floor((m%1440)/60))}:${pad(m%60)}`;
@@ -165,8 +211,11 @@ const key = (d,p) => d+"_"+p;
 const val = (d,p,hid) => { const v = S.logs[key(d,p)]?.values?.[hid]; return typeof v==="number" ? v : null; };
 const done = (d,p,hid) => !!S.logs[key(d,p)]?.done?.[hid];
 const adj = (v,h) => (h.type==="clock" && h.target >= 1080 && v < 360) ? v + 1440 : v;
-const cmp = (v,h) => h.dir==="max" ? adj(v,h) <= h.target : adj(v,h) >= h.target;
-function indiv(d,p,h){ if (h.type==="check") return done(d,p,h.id); const v = val(d,p,h.id); return v!==null && cmp(v,h); }
+/* A shared goal can have a different target for each person (h.targets = {a, b}). */
+const tgtOf = (h,p) => { const t = h.targets?.[p]; return p && h.who==="both" && h.share!=="combined" && t!=null && t!=="" && !isNaN(Number(t)) ? Number(t) : h.target; };
+const ownTargets = h => h.who==="both" && h.share!=="combined" && h.type!=="check" && !!h.targets;
+const cmp = (v,h,p) => { const T = tgtOf(h,p), a = (h.type==="clock" && T >= 1080 && v < 360) ? v + 1440 : v; return h.dir==="max" ? a <= T : a >= T; };
+function indiv(d,p,h){ if (h.type==="check") return done(d,p,h.id); const v = val(d,p,h.id); return v!==null && cmp(v,h,p); }
 function mine(d,p,h){
   if (h.share==="combined") return val(d,p,h.id)!==null;
   return indiv(d,p,h);
@@ -177,10 +226,11 @@ function met(d,p,h){
   return indiv(d,p,h);
 }
 const fmtVal = (h,v) => v===null ? "" : h.type==="duration" ? fmtDur(v) : h.type==="clock" ? fmtClock(v) : `${fmtNum(v)} ${h.unit||""}`.trim();
-function targetText(h){
-  if (h.type==="duration") return `${h.dir==="max"?"at most":"at least"} ${fmtDur(h.target)}`;
-  if (h.type==="clock") return `${h.dir==="max"?"by":"after"} ${fmtClock(h.target)}`;
-  if (h.type==="number") return `${h.dir==="max"?"at most":"at least"} ${fmtNum(h.target)} ${h.unit||""}`.trim();
+function targetText(h, p){
+  const T = tgtOf(h, p);
+  if (h.type==="duration") return `${h.dir==="max"?"at most":"at least"} ${fmtDur(T)}`;
+  if (h.type==="clock") return `${h.dir==="max"?"by":"after"} ${fmtClock(T)}`;
+  if (h.type==="number") return `${h.dir==="max"?"at most":"at least"} ${fmtNum(T)} ${h.unit||""}`.trim();
   return "";
 }
 function seasonFor(d){ const s = S.config?.season; if (["spring","summer","fall","winter"].includes(s)) return s; const m = parse(d).getMonth()+1; return m>=3&&m<=5 ? "spring" : m>=6&&m<=8 ? "summer" : m>=9&&m<=11 ? "fall" : "winter"; }

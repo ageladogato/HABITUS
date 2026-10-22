@@ -2,6 +2,8 @@
 
 A shared habit tracker for two accountability buddies. Each of you has an avatar who lives out your daily goals in one of ten cities (Beijing, Paris, Rome, Tokyo, New York, San Francisco, Athens, London, Copenhagen, Delhi), with live local time, weather that follows your progress, a sidekick, coins, a shop and a big shared goal.
 
+**Live app:** https://ageladogato.github.io/HABITUS/
+
 ## Run it
 
 Open `index.html` in any browser. No install, no server.
