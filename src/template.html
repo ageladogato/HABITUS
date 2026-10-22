@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Habitus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/*STYLES*/
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <svg class="dapple" viewBox="0 0 560 260" aria-hidden="true">
+      <g fill="var(--shade)"><ellipse cx="420" cy="70" rx="120" ry="60"/><ellipse cx="300" cy="40" rx="70" ry="34"/><ellipse cx="510" cy="170" rx="80" ry="50"/></g>
+      <g opacity=".6">
+        <path d="M470 20 q-60 30 -110 90" stroke="var(--moss)" stroke-width="2" fill="none"/>
+        <ellipse cx="450" cy="34" rx="14" ry="6" transform="rotate(-30 450 34)" fill="var(--leaf)"/>
+        <ellipse cx="428" cy="50" rx="14" ry="6" transform="rotate(25 428 50)" fill="var(--leaf)"/>
+        <ellipse cx="405" cy="66" rx="14" ry="6" transform="rotate(-35 405 66)" fill="var(--leaf-2)"/>
+        <ellipse cx="385" cy="85" rx="13" ry="5.5" transform="rotate(30 385 85)" fill="var(--ochre)"/>
+        <ellipse cx="368" cy="102" rx="12" ry="5" transform="rotate(-40 368 102)" fill="var(--bloom)"/>
+      </g>
+    </svg>
+    <div class="toprow">
+      <div><h1>Habitus</h1><p class="sub" id="sub">Two accountability buddies, one garden.</p></div>
+      <div class="status" id="status"><i></i><span>Opening the gate…</span></div>
+    </div>
+    
+    
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Views">
+    <button class="tab" role="tab" id="t-day" aria-controls="p-day" aria-selected="true">Day</button>
+    <button class="tab" role="tab" id="t-cal" aria-controls="p-cal" aria-selected="false">Calendar</button>
+    <button class="tab" role="tab" id="t-garden" aria-controls="p-garden" aria-selected="false">Garden</button>
+    <span class="spacer"></span>
+    <button class="ghost" id="openSettings">Settings</button>
+  </nav>
+
+  <section id="p-day" role="tabpanel" aria-labelledby="t-day"></section>
+  <section id="p-cal" role="tabpanel" aria-labelledby="t-cal" hidden></section>
+  <section id="p-garden" role="tabpanel" aria-labelledby="t-garden" hidden></section>
+  <div id="goal"></div>
+  <footer class="citystrip"><div class="banner" id="banner"></div></footer>
+</div>
+
+<dialog id="wizard" aria-label="Set up Habitus"></dialog>
+
+<dialog id="shop"><div class="dlg" id="shopBody"></div></dialog>
+
+<script>
+/*SCRIPTS*/
+</script>
+</body>
+</html>
