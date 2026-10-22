@@ -10,10 +10,32 @@ Open `index.html` in any browser. No install, no server.
 
 ## Where data is saved
 
-- **On the published claude.ai link:** everything is stored in the artifact’s shared database, so both buddies see the same data from any device.
-- **Anywhere else** (opening `index.html` locally, GitHub Pages, etc.): data is saved in the browser’s `localStorage`, so it lives on that one device only. The corner of the page says “Saved on this device only”.
+- **On the claude.ai link:** everything is stored in the page's shared database, so both buddies see each other's progress from any device.
+- **On GitHub Pages (or any other copy):** if `FIREBASE_CONFIG` in `src/01b-firebase.js` is filled in, everything is stored in that Firebase project, so both buddies see each other's progress there too. If it is left as `null`, data stays in that one browser (the corner says "Saved on this device only").
 
-To share data between two people outside claude.ai, point the storage layer (`localStore()` and `dbStore()` in `src/01-core.js`) at a backend such as Firebase or Supabase. Every read and write already goes through that one layer.
+The claude.ai page and the Firebase project are two separate databases.
+
+### Setting up Firebase (free, about 5 minutes)
+
+1. Go to https://console.firebase.google.com, click **Create a project**, give it a name, and finish (Google Analytics can be off).
+2. **Build → Authentication → Get started → Sign-in method → Anonymous → Enable → Save.**
+3. **Build → Firestore Database → Create database**, pick a location, start in **production mode**.
+4. In Firestore, open the **Rules** tab, replace everything with the rules below and click **Publish**:
+   ```
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /{coll}/{doc} {
+         allow read, write: if request.auth != null && coll in ['config', 'logs', 'picnic', 'messages'];
+       }
+     }
+   }
+   ```
+5. **Project settings (gear icon) → General → Your apps → Web (`</>`)**, register an app (no hosting needed), and copy the `firebaseConfig` object.
+6. Paste it into `src/01b-firebase.js` as `const FIREBASE_CONFIG = { ... };`, run `python3 build.py`, and push.
+7. **Authentication → Settings → Authorized domains**: add `<username>.github.io`.
+
+Anyone who has the site's address can open it and see or change the data, so only share the link with your buddy.
 
 ## Project layout
 

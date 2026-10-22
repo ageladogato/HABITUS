@@ -1,4 +1,5 @@
 01-core.js
+01b-firebase.js
 02-items-and-plants.js
 03-avatars.js
 04-wardrobe-and-shop.js

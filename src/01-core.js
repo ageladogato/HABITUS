@@ -288,7 +288,7 @@ async function boot(){
     try { user = await window.claude.use("user"); } catch {}
   }
   if (db) { store = dbStore(db); try { if (await user?.can?.("data.write")===false) S.readOnly = true; } catch {} }
-  else store = localStore();
+  else { const fdb = window.claude ? null : await firebaseDb(); store = fdb ? dbStore(fdb) : localStore(); }
   S.mode = store.mode; store.start();
 }
 let pendingWrites = 0, lastSaved = 0, saveTimer = null;
