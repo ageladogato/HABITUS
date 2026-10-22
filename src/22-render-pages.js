@@ -127,7 +127,7 @@ function habitRow(d,p,h){
   const own = mine(d,p,h), ok = met(d,p,h), cs = curStreak(p,h), o = other(p), t = today();
   const mini = `<svg class="mini" viewBox="-24 -24 48 48" aria-hidden="true" opacity="${ok?1:.45}">${itemSVG(h.item)}</svg>`;
   const notes = [];
-  if (h.type!=="check") notes.push(h.share==="combined" ? `Together ${targetText(h)}` : `Goal ${targetText(h)}`);
+  if (h.type!=="check") notes.push(h.share==="combined" ? `Together ${targetText(h)}` : `Goal ${targetText(h,p)}`);
   if (h.share==="both") notes.push(ok ? "Both of you did it" : own ? `Waiting on ${name(o)}` : indiv(d,o,h) ? `${name(o)} did ${pronOf(o).pos}` : "Counts when you both do it");
   if (h.share==="combined") { const vo = val(d,o,h.id), vm = val(d,p,h.id); if (vm!==null && vo!==null) notes.push(`${fmtVal(h,vm+vo)} together so far`); else if (vm!==null) notes.push(`Waiting on ${name(o)}`); }
   if (h.type==="duration" || h.type==="number") {
@@ -171,8 +171,9 @@ function renderCal(){
   for (const h of habits().filter(h=>h.type!=="check")) {
     const ps = P.filter(p=>applies(h,p)), comb = h.share==="combined", clock = h.type==="clock";
     const vals = []; for (let i=1;i<=days;i++){ const ds = `${y}-${pad(m)}-${pad(i)}`; for (const p of ps){ const v = val(ds,p,h.id); if (v!==null) vals.push(adj(v,h)); } if (comb) { const a = val(ds,"a",h.id), b = val(ds,"b",h.id); if (a!==null||b!==null) vals.push((a||0)+(b||0)); } }
-    let lo = 0, hi = Math.max(h.target||1, ...vals, 1);
-    if (clock) { const all = [...vals, h.target]; lo = Math.max(0, Math.min(...all) - 60); hi = Math.max(...all) + 60; }
+    const own = !comb && ownTargets(h) && ps.length > 1, tgts = own ? ps.map(p => [p, tgtOf(h,p)]) : [[null, h.target]];
+    let lo = 0, hi = Math.max(...tgts.map(x=>x[1]||1), ...vals, 1);
+    if (clock) { const all = [...vals, ...tgts.map(x=>x[1])]; lo = Math.max(0, Math.min(...all) - 60); hi = Math.max(...all) + 60; }
     for (const p of ps){ const b = h.baseline?.[p]; if (!comb && !clock && b!==""&&b!=null&&!isNaN(Number(b))) hi = Math.max(hi, Number(b)); }
     if (!clock) hi *= 1.15;
     const W=700, H=150, x0=54, x1=690, yT=12, yB=118, gw=(x1-x0)/days, bw = comb ? gw-3 : Math.max(2,(gw-3)/ps.length);
@@ -186,13 +187,13 @@ function renderCal(){
       else ps.forEach((p,j) => { const v = val(ds,p,h.id); if (v!==null) svg += `<rect x="${x0+(i-1)*gw+1.5+j*bw}" y="${Y(v)}" width="${bw-.5}" height="${yB-Y(v)}" rx="1.5" fill="var(--${p})" opacity="${met(ds,p,h)?1:.45}"><title>${esc(name(p))}, ${i}: ${esc(fmtVal(h,v))}</title></rect>`; });
       if (i===1||i%5===0) svg += `<text x="${x0+(i-.5)*gw}" y="${yB+16}" text-anchor="middle" font-size="11" fill="var(--ink-soft)">${i}</text>`;
     }
-    const ty = Y(h.target);
-    svg += `<line x1="${x0}" x2="${x1}" y1="${ty}" y2="${ty}" stroke="var(--moss)" stroke-dasharray="5 4" stroke-width="1.5"/><text x="${x0-6}" y="${ty+4}" text-anchor="end" font-size="11" fill="var(--moss)">${esc(lab(h.target))}</text>`;
+    for (const [tp, tv] of tgts) { const ty = Y(clock ? adj(tv,h) : tv), col = tp ? `var(--${tp})` : "var(--moss)";
+      svg += `<line x1="${x0}" x2="${x1}" y1="${ty}" y2="${ty}" stroke="${col}" stroke-dasharray="5 4" stroke-width="1.5"/><text x="${x0-6}" y="${ty+4}" text-anchor="end" font-size="11" fill="${col}">${esc(lab(tv))}</text>`; }
     if (!comb && !clock) ps.forEach(p => { const b = h.baseline?.[p]; if (b!==""&&b!=null&&!isNaN(Number(b))) { const by = Y(Number(b)); svg += `<line x1="${x0}" x2="${x1}" y1="${by}" y2="${by}" stroke="var(--${p})" stroke-dasharray="2 4" stroke-width="1.5" opacity=".8"/>`; } });
     svg += `</svg>`;
     const avgs = ps.map(p => { let s=0,n=0; for(let i=1;i<=days;i++){const v=val(`${y}-${pad(m)}-${pad(i)}`,p,h.id); if(v!==null){s+=adj(v,h);n++;}} return n?`${esc(name(p))} averaged ${esc(fmtVal(h,s/n))}`:`${esc(name(p))} hasn’t logged this month`; });
     const hasBase = !comb && !clock && ps.some(p => h.baseline?.[p]!==""&&h.baseline?.[p]!=null);
-    charts += `<div class="chart"><h3>${esc(h.name)}</h3><p>${comb?`Your combined total, stacked, against a shared goal of ${esc(targetText(h))}.`:clock?`What time it happened each day. Goal ${esc(targetText(h))}.`:`Goal ${esc(targetText(h))} a day.`} Dashed green is the goal${hasBase?", dotted lines are your starting points":""}. ${avgs.join("; ")}.</p>${svg}</div>`;
+    charts += `<div class="chart"><h3>${esc(h.name)}</h3><p>${comb?`Your combined total, stacked, against a shared goal of ${esc(targetText(h))}.`:clock?`What time it happened each day. Goal ${esc(targetText(h))}.`:own?`Goals: ${ps.map(p=>`${esc(name(p))} ${esc(targetText(h,p))}`).join(", ")} a day.`:`Goal ${esc(targetText(h))} a day.`} ${own?"Dashed lines in your colours are your goals":"Dashed green is the goal"}${hasBase?", dotted lines are your starting points":""}. ${avgs.join("; ")}.</p>${svg}</div>`;
   }
   el.innerHTML = `<div class="monthbar"><button class="iconbtn" data-act="prevmonth" aria-label="Previous month">‹</button><h2>${esc(label)}</h2>
     <button class="iconbtn" data-act="nextmonth" aria-label="Next month" ${S.month>=t.slice(0,7)?"disabled":""}>›</button></div>

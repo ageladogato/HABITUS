@@ -15,7 +15,7 @@ function stepList(editing){
   ];
   const L = [{id:"welcome", r:wWelcome}, {id:"names", r:wNamesOnly}, {id:"prons", r:wProns}, {id:"pets", r:wPets}];
   for (const p of P) LOOK_MINI.forEach((m,k) => L.push({id:`look-${p}-${k}`, r:()=>wLookMini(p,k)}));
-  L.push({id:"goals", r:wGoals}, {id:"who", r:wWho}, {id:"bigtext", r:wBigText}, {id:"biglen", r:wBigLen}, {id:"place-a", r:()=>wPlaceOne("a")}, {id:"place-b", r:()=>wPlaceOne("b")}, {id:"checkin", r:wCheckin}, {id:"done", r:wDone});
+  L.push({id:"goals", r:wGoals}, {id:"who", r:wWho}, {id:"tune", r:wTune}, {id:"bigtext", r:wBigText}, {id:"biglen", r:wBigLen}, {id:"place-a", r:()=>wPlaceOne("a")}, {id:"place-b", r:()=>wPlaceOne("b")}, {id:"checkin", r:wCheckin}, {id:"done", r:wDone});
   return L;
 }
 const WZ = {i:0, dir:1, editing:false, d:null, cat:{a:"face",b:"face"}, anim:true, overridden:false};
@@ -97,30 +97,58 @@ function wLook(p){
     <div class="builder"><div class="preview"><svg class="figbig anim" viewBox="-70 -140 140 192" role="img" aria-label="${esc(nm(p))}, full figure"><ellipse cx="0" cy="44" rx="46" ry="8" fill="var(--${p}-soft)" opacity=".7"/>${figureSVG(av,"stand",false,"wave")}</svg>${sceneSVG(p, today(), {empty:true, av, pet:D().people[p].pet, place:D().places[p], w:"sunny", frac:1, uid:"look"+p, act:"language", label:`Preview of ${nm(p)} out in the city`})}<button type="button" class="ghost dice" data-w="surprise" data-p="${p}">Surprise me</button></div>
     <div><div class="cattabs" role="tablist">${Object.entries(LOOKCATS).map(([k,l])=>`<button type="button" role="tab" style="--pc:var(--${p})" data-w="cat" data-p="${p}" data-v="${k}" aria-selected="${cat===k}">${l}</button>`).join("")}</div>${groups}</div></div>`;
 }
-const typeTag = h => h.type==="check" ? "Yes or no" : h.type==="duration" ? `How long, ${targetText({...h,target:Number(h.target)})}` : `What time, ${targetText({...h,target:Number(h.target)})}`;
+const TYPE_OPTS = [["check","Yes or no"],["number","How many"],["duration","How long"],["clock","What time"]];
+const TYPE_DEFAULTS = {check:{}, number:{dir:"min", target:1, unit:""}, duration:{dir:"min", target:30}, clock:{dir:"max", target:1380}};
+const typeTag = h => { const tt = targetText({...h, target:Number(h.target)}); return h.type==="check" ? "Yes or no" : tt.charAt(0).toUpperCase() + tt.slice(1); };
+const OWN_HINT = {move:"Swim 20 lengths", nourish:"Eat a home-made lunch", sleep:"No caffeine after 2pm", read:"Finish a chapter", unplug:"No phone at dinner", mindful:"Pray", journal:"Write one line a day", study:"Practise piano", language:"Watch a show in Spanish", connect:"Text my sister"};
 function wGoals(){
-  const chosen = new Set(D().habits.map(h => h.name.toLowerCase()));
-  const customs = D().habits.filter(h => !SUGGESTIONS.some(s => s.name.toLowerCase()===h.name.toLowerCase()));
-  const card = (h, idx, custom) => `<button type="button" class="scard" data-w="${custom?"rmgoal":"pick"}" data-i="${idx}" aria-pressed="${custom || chosen.has(h.name.toLowerCase())}"><svg viewBox="-24 -24 48 48" aria-hidden="true">${itemSVG(CATS[h.cat||guessCat(h.name)].icon)}</svg><strong>${esc(h.name)}</strong><small>${esc(CATS[h.cat||guessCat(h.name)].label)}, ${esc(typeTag(h).toLowerCase())}</small></button>`;
-  return `<h2>What will you hold each other to?</h2><p class="lede">Tap a few to start. You can change everything later.</p>
-    <div class="sugg">${SUGGESTIONS.map((h,i)=>card(h,i,false)).join("")}${customs.map(h=>card(h, D().habits.indexOf(h), true)).join("")}</div>
-    <div class="addown"><input id="ownName" maxlength="60" placeholder="Or add your own, e.g. Practise piano" aria-label="Your own goal">
-      ${pills('data-w="owntype"', [["check","Yes or no"],["duration","How long"],["clock","What time"]], WZ.ownType||"check")}<button type="button" class="primary" data-w="addown">Add</button></div>
-    <p class="small" style="margin-top:10px">${D().habits.length} chosen.</p>`;
+  const hs = D().habits, chosen = new Set(hs.map(h => h.name.toLowerCase()));
+  const catOf = h => CATS[h.cat] ? h.cat : guessCat(h.name);
+  const cat = WZ.goalCat || (hs[0] ? catOf(hs[hs.length-1]) : "move"), C = CATS[cat];
+  const ideas = GOAL_IDEAS[cat] || [];
+  const customs = hs.filter(h => catOf(h)===cat && !ideas.some(s => s.name.toLowerCase()===h.name.toLowerCase()));
+  const areas = Object.entries(CATS).map(([k,c]) => { const n = hs.filter(h => catOf(h)===k).length;
+    return `<button type="button" class="scard area" data-w="gcat" data-v="${k}" aria-pressed="${k===cat}"><svg viewBox="-24 -24 48 48" aria-hidden="true">${itemSVG(c.icon)}</svg><strong>${esc(c.label)}</strong><small>${n ? `${n} chosen` : "&nbsp;"}</small></button>`; }).join("");
+  const card = (h, attrs, on) => `<button type="button" class="scard" ${attrs} aria-pressed="${on}"><svg viewBox="-24 -24 48 48" aria-hidden="true">${itemSVG(C.icon)}</svg><strong>${esc(h.name)}</strong><small>${esc(typeTag(h))}</small></button>`;
+  const ot = WZ.ownType || "check";
+  const ownExtra = ot==="number" ? `<input id="ownTarget" class="small-in" type="number" min="0" step="any" inputmode="decimal" data-wf="owntarget" value="${esc(WZ.ownTarget??"")}" placeholder="How many" aria-label="Target number"><input id="ownUnit" class="small-in" data-wf="ownunit" maxlength="20" value="${esc(WZ.ownUnit||"")}" placeholder="of what, e.g. glasses" aria-label="Unit">` : "";
+  return `<h2>What will you hold each other to?</h2><p class="lede">First choose an area, then the exact goal. You can set your own numbers in the next steps.</p>
+    <h3 class="wsub">1. Choose an area</h3>
+    <div class="sugg areas">${areas}</div>
+    <h3 class="wsub">2. Choose the exact goal for ${esc(C.label.toLowerCase())}</h3>
+    <div class="sugg">${ideas.map((h,i)=>card(h, `data-w="pick" data-c="${cat}" data-i="${i}"`, chosen.has(h.name.toLowerCase()))).join("")}${customs.map(h=>card(h, `data-w="rmgoal" data-i="${hs.indexOf(h)}"`, true)).join("")}</div>
+    <div class="addown"><input id="ownName" data-wf="ownname" maxlength="60" value="${esc(WZ.ownName||"")}" placeholder="Or write your own, e.g. ${esc(OWN_HINT[cat]||"Practise piano")}" aria-label="Your own ${esc(C.label.toLowerCase())} goal">
+      ${pills('data-w="owntype"', TYPE_OPTS, ot)}${ownExtra}<button type="button" class="primary" data-w="addown">Add</button></div>
+    <p class="small" style="margin-top:10px">${hs.length ? `${hs.length} chosen: ${hs.map(h => esc(h.name)).join(", ")}.` : "None chosen yet."}</p>`;
+}
+function tgtField(h, i, p){
+  const v = p ? (h.targets?.[p] ?? h.target) : h.target, pa = p ? ` data-p="${p}"` : "", who = p ? ` for ${nm(p)}` : "";
+  if (h.type==="duration") return `<span class="stepper"><button type="button" data-w="step" data-i="${i}"${pa} data-v="-15" aria-label="Less${esc(who)}">−</button><span>${esc(fmtDur(Number(v)||0))}</span><button type="button" data-w="step" data-i="${i}"${pa} data-v="15" aria-label="More${esc(who)}">+</button></span>`;
+  if (h.type==="clock") return `<input type="time" data-wf="clock" data-i="${i}"${pa} value="${clockStr(Number(v)||0)}" aria-label="${esc(h.name)} time${esc(who)}">`;
+  return `<input class="small-in" type="number" min="0" step="any" inputmode="decimal" data-wf="tnum" data-i="${i}"${pa} value="${esc(v)}" aria-label="${esc(h.name)} target${esc(who)}"><span>${esc(h.unit||"")}</span>`;
 }
 function wTune(){
   const hs = D().habits;
-  if (!hs.length) return `<h2>Fine-tune</h2><p class="lede">Pick a goal or two first, then come back here.</p>`;
-  return `<h2>Fine-tune your goals</h2><p class="lede">Who does each goal, how shared goals count, targets, and what each one shows in the scene.</p><div class="tune">${hs.map((h,i)=>{
+  if (!hs.length) return `<h2>Set your exact goals</h2><p class="lede">Pick a goal or two first, then come back here.</p>`;
+  return `<h2>Set your exact goals</h2><p class="lede">Make each goal specific: how it’s measured, the exact number, and whether you each aim for something different.</p><div class="tune">${hs.map((h,i)=>{
+    const cat = CATS[h.cat] ? h.cat : guessCat(h.name);
     let tgt = "";
-    if (h.type==="duration") tgt = `<div class="rowx">${pills(`data-w="dir" data-i="${i}"`, [["max","At most"],["min","At least"]], h.dir)}<span class="stepper"><button type="button" data-w="step" data-i="${i}" data-v="-15" aria-label="Less">−</button><span>${esc(fmtDur(Number(h.target)||0))}</span><button type="button" data-w="step" data-i="${i}" data-v="15" aria-label="More">+</button></span></div>`;
-    if (h.type==="clock") tgt = `<div class="rowx">${pills(`data-w="dir" data-i="${i}"`, [["max","By"],["min","After"]], h.dir)}<input type="time" data-wf="clock" data-i="${i}" value="${clockStr(Number(h.target)||0)}" aria-label="${esc(h.name)} time"></div>`;
-    const shareOpts = [["each","Separately"],["both","Only if we both do"]].concat(h.type==="duration" ? [["combined","Combined total"]] : []);
-    return `<div class="tunecard"><button type="button" class="ico" data-w="icon" data-i="${i}" title="Tap to change the category" aria-label="Change category for ${esc(h.name)}, now ${esc(CATS[h.cat||"study"].label)}"><svg viewBox="-24 -24 48 48">${itemSVG(CATS[h.cat||guessCat(h.name)].icon)}</svg></button><div style="display:grid;gap:8px">
+    if (h.type!=="check") {
+      const dirs = h.type==="clock" ? [["max","By"],["min","After"]] : [["min","At least"],["max","At most"]];
+      const split = h.who==="both" && (h.share||"each")!=="combined";
+      const own = split && !!h.targets;
+      tgt = `<div class="rowx"><span>Goal:</span>${pills(`data-w="dir" data-i="${i}"`, dirs, h.dir)}${own ? "" : tgtField(h,i)}</div>`;
+      if (h.type==="number") tgt += `<div class="rowx"><span>Counting:</span><input class="small-in" data-wf="unit" data-i="${i}" maxlength="20" value="${esc(h.unit||"")}" placeholder="e.g. glasses, steps, pages" aria-label="What you’re counting for ${esc(h.name)}"></div>`;
+      if (split) tgt += `<div class="rowx"><span>Target:</span>${pills(`data-w="split" data-i="${i}"`, [["same","Same for both of us"],["own","Each sets their own"]], own ? "own" : "same")}</div>`;
+      if (own) tgt += P.map(p => `<div class="rowx"><span>${esc(nm(p))}:</span>${tgtField(h,i,p)}</div>`).join("");
+    }
+    const shareOpts = [["each","Separately"],["both","Only if we both do"]].concat(h.type==="duration"||h.type==="number" ? [["combined","Combined total"]] : []);
+    return `<div class="tunecard"><button type="button" class="ico" data-w="icon" data-i="${i}" title="Tap to change the area" aria-label="Change area for ${esc(h.name)}, now ${esc(CATS[cat].label)}"><svg viewBox="-24 -24 48 48">${itemSVG(CATS[cat].icon)}</svg></button><div style="display:grid;gap:8px">
       <input class="nm" data-wf="hname" data-i="${i}" value="${esc(h.name)}" maxlength="60" aria-label="Goal name">
+      <div class="rowx"><span>Measured by:</span>${pills(`data-w="type" data-i="${i}"`, TYPE_OPTS, h.type)}</div>
       <div class="rowx"><span>Who:</span>${pills(`data-w="who" data-i="${i}"`, [["both","Both of us"],["a",nm("a")],["b",nm("b")]], h.who)}</div>
-      ${STYLE_OPTS[h.cat||guessCat(h.name)] ? `<div class="rowx"><span>Show as:</span><select data-wf="style" data-i="${i}" aria-label="How ${esc(h.name)} is shown">${STYLE_OPTS[h.cat||guessCat(h.name)].map(([v,l])=>`<option value="${v}" ${(h.style||"")===v?"selected":""}>${l}</option>`).join("")}</select></div>` : ""}
-      ${h.who==="both" ? `<div class="rowx"><span>Counts:</span>${pills(`data-w="share" data-i="${i}"`, shareOpts, h.share||"each")}</div>` : ""}${tgt}</div></div>`;
+      ${h.who==="both" ? `<div class="rowx"><span>Counts:</span>${pills(`data-w="share" data-i="${i}"`, shareOpts, h.share||"each")}</div>` : ""}${tgt}
+      ${STYLE_OPTS[cat] ? `<div class="rowx"><span>Show as:</span><select data-wf="style" data-i="${i}" aria-label="How ${esc(h.name)} is shown">${STYLE_OPTS[cat].map(([v,l])=>`<option value="${v}" ${(h.style||"")===v?"selected":""}>${l}</option>`).join("")}</select></div>` : ""}</div></div>`;
   }).join("")}</div>`;
 }
 const STYLE_OPTS = {
@@ -224,7 +252,9 @@ function buildConfig(){
     const o = {id:h.id, name:String(h.name).trim(), type:h.type, cat, item:CATS[cat].icon, plant:h.plant||PLANT_KINDS[i%6], who:h.who||"both"};
     if (h.style) o.style = h.style;
     if (o.who==="both") o.share = h.share==="both" ? "both" : (h.share==="combined" && (h.type==="duration"||h.type==="number")) ? "combined" : "each";
-    if (h.type!=="check") { o.dir = h.dir==="min"?"min":"max"; o.target = Number(h.target)||0; if (h.unit) o.unit = h.unit; if (h.baseline && Object.keys(h.baseline).length) o.baseline = h.baseline; }
+    if (h.type!=="check") { o.dir = h.dir==="min"?"min":"max"; o.target = Number(h.target)||0; if (h.unit) o.unit = h.unit;
+      if (o.who==="both" && o.share!=="combined" && h.targets) o.targets = Object.fromEntries(P.map(p => [p, Number(h.targets[p] ?? h.target) || 0]));
+      if (h.baseline && Object.keys(h.baseline).length) o.baseline = h.baseline; }
     return o;
   });
   const keep = new Set(habitsOut.map(h=>h.id));
@@ -264,14 +294,21 @@ wiz.addEventListener("click", e => {
     case "cat": WZ.cat[p] = v; break;
     case "av": d.people[p].avatar = {...d.people[p].avatar, [b.dataset.k]:v}; break;
     case "surprise": d.people[p].avatar = randomAvatar(); break;
-    case "pick": { const sug = SUGGESTIONS[i], ix = d.habits.findIndex(h => h.name.toLowerCase()===sug.name.toLowerCase()); if (ix>=0) d.habits.splice(ix,1); else d.habits.push({...sug, item:CATS[sug.cat].icon, id:newId(), who:"both", share:"each", plant:PLANT_KINDS[d.habits.length%6]}); break; }
+    case "gcat": WZ.goalCat = v; break;
+    case "pick": { const c = b.dataset.c, sug = {...GOAL_IDEAS[c][i], cat:c}, ix = d.habits.findIndex(h => h.name.toLowerCase()===sug.name.toLowerCase()); if (ix>=0) d.habits.splice(ix,1); else d.habits.push({...sug, item:CATS[sug.cat].icon, id:newId(), who:"both", share:"each", plant:PLANT_KINDS[d.habits.length%6]}); break; }
     case "rmgoal": d.habits.splice(i,1); break;
     case "owntype": WZ.ownType = v; break;
-    case "addown": { const inp = document.getElementById("ownName"), n = (inp?.value||"").trim(); if (!n) { inp?.focus(); return; } const tp = WZ.ownType||"check"; d.habits.push({id:newId(), name:n, type:tp, dir:tp==="duration"?"min":"max", target:tp==="duration"?30:tp==="clock"?1380:0, cat:guessCat(n), item:CATS[guessCat(n)].icon, who:"both", share:"each", plant:PLANT_KINDS[d.habits.length%6]}); break; }
+    case "addown": {
+      const inp = document.getElementById("ownName"), n = (inp?.value||"").trim(); if (!n) { inp?.focus(); return; }
+      const tp = WZ.ownType||"check", c = WZ.goalCat || guessCat(n), h = {id:newId(), name:n, type:tp, ...TYPE_DEFAULTS[tp], cat:c, item:CATS[c].icon, who:"both", share:"each", plant:PLANT_KINDS[d.habits.length%6]};
+      if (tp==="number") { const tv = Number(WZ.ownTarget); if (!(tv > 0)) { document.getElementById("ownTarget")?.focus(); return; } h.target = tv; h.unit = (WZ.ownUnit||"").trim(); }
+      d.habits.push(h); WZ.ownName = ""; WZ.ownTarget = ""; WZ.ownUnit = ""; break; }
+    case "type": { const h = d.habits[i]; if (h.type===v) return; Object.assign(h, {type:v}, TYPE_DEFAULTS[v]); delete h.targets; delete h.baseline; if (v!=="duration" && v!=="number" && h.share==="combined") h.share = "each"; break; }
+    case "split": { const h = d.habits[i]; if (v==="own") h.targets = {a:h.target, b:h.target}; else delete h.targets; break; }
     case "who": d.habits[i].who = v; break;
     case "share": d.habits[i].share = v; break;
     case "dir": d.habits[i].dir = v; break;
-    case "step": d.habits[i].target = Math.max(5, Math.min(1440, (Number(d.habits[i].target)||0) + Number(v))); break;
+    case "step": { const h = d.habits[i], bump = x => Math.max(5, Math.min(1440, (Number(x)||0) + Number(v))); if (p && h.targets) h.targets[p] = bump(h.targets[p] ?? h.target); else h.target = bump(h.target); break; }
     case "icon": { const keys = Object.keys(CATS), k = keys.indexOf(d.habits[i].cat); d.habits[i].cat = keys[(k+1)%keys.length]; d.habits[i].item = CATS[d.habits[i].cat].icon; break; }
     case "idea": d.goal.text = v; break;
     case "len": { d.goal.len = v; const L = LENS.find(x=>x[0]===v); d.goal.start = d.goal.start || today(); if (L && L[2]!=null) d.goal.end = addDays(d.goal.start < today() ? d.goal.start : today(), L[2]); break; }
@@ -290,7 +327,11 @@ wiz.addEventListener("input", e => {
   if (f==="name") { d.people[t.dataset.p].name = t.value; return; }
   if (f==="hname") { d.habits[+t.dataset.i].name = t.value; return; }
   if (f==="style") { d.habits[+t.dataset.i].style = t.value; return; }
-  if (f==="clock") { const m = parseClock(t.value); if (m!=null) d.habits[+t.dataset.i].target = m; return; }
+  if (f==="clock" || f==="tnum") { const h = d.habits[+t.dataset.i], m = f==="clock" ? parseClock(t.value) : (t.value==="" ? null : Number(t.value)); if (m==null || isNaN(m)) return; if (t.dataset.p && h.targets) h.targets[t.dataset.p] = m; else h.target = m; return; }
+  if (f==="unit") { d.habits[+t.dataset.i].unit = t.value; return; }
+  if (f==="ownname") { WZ.ownName = t.value; return; }
+  if (f==="owntarget") { WZ.ownTarget = t.value; return; }
+  if (f==="ownunit") { WZ.ownUnit = t.value; return; }
   if (f==="gtext") { d.goal.text = t.value; wiz.querySelectorAll('[data-w="idea"]').forEach(b => b.setAttribute("aria-pressed", b.dataset.v===t.value)); return; }
   if (f==="gwhy") { d.goal.why = t.value; return; }
   if (f==="gend") { if (t.value) d.goal.end = t.value; const el = document.getElementById("ambtxt"); if (el) el.innerHTML = `${d.goal.ambition}% of everything possible, which is <b>${goalCount()}</b> daily goals met together by ${esc(shortDate(d.goal.end))}.`; return; }
